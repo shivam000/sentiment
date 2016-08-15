@@ -1,0 +1,21 @@
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
+import pandas as pd
+
+df=pd.read_csv(r"file-location",encoding='latin')
+verbatim=df["text"]
+sid = SentimentIntensityAnalyzer()
+n=0
+for sentence in verbatim:
+     print(sentence)
+     ss = sid.polarity_scores(sentence)
+     print(ss['compound'])
+     df.loc[n, 'compound']=ss['compound']
+     df.loc[n, 'neg']=ss['neg']
+     df.loc[n, 'neu']=ss['neu']
+     df.loc[n, 'pos']=ss['pos']
+     df.to_csv(r"output-file-location")
+     n=n+1
+     for k in sorted(ss):
+         print('{0}: {1}, '.format(k, ss[k]), end='')
+     print()
+    
