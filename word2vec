@@ -1,0 +1,82 @@
+from sklearn.cross_validation import train_test_split
+from sklearn.preprocessing import scale
+from gensim.models.word2vec import Word2Vec
+import pandas as pd
+import numpy as np
+
+response=pd.read_excel(r'input-file-location', encoding='latin')
+x=response['VERBAL_RESPNS_TXT']
+y=response['Sentiment']
+#x=response.as_matrix(columns=[response.columns[5]])
+#y=response.as_matrix(columns=[response.columns[10]])
+
+x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2)
+
+n_dim=10000
+verbatim_word2vec= Word2Vec(size=n_dim, min_count=15)
+verbatim_word2vec.build_vocab(x_train)
+verbatim_word2vec.train(x_train)
+
+def buildWordVector(text, size):
+    vec = np.zeros(size).reshape((1, size))
+    count = 0.
+    for word in text:
+        try:
+            vec += verbatim_word2vec[word].reshape((1, size))
+            count += 1.
+        except KeyError:
+            continue
+    if count != 0:
+        vec /= count
+    return vec
+
+
+train_vecs = np.concatenate([buildWordVector(z, n_dim) for z in x_train])
+train_vecs = scale(train_vecs)
+
+test_vecs = np.concatenate([buildWordVector(z, n_dim) for z in x_test])
+test_vecs = scale(test_vecs)
+
+from sklearn.naive_bayes import GaussianNB
+gnb = GaussianNB()
+gnb.fit(train_vecs, y_train)
+
+print(gnb.score(test_vecs, y_test))
+
+from sklearn.neighbors import KNeighborsClassifier
+neigh = KNeighborsClassifier(n_neighbors=3)
+neigh.fit(train_vecs, y_train) 
+
+print (neigh.score(test_vecs, y_test))
+
+
+from sklearn.linear_model import SGDClassifier
+
+lr = SGDClassifier(loss='log', penalty='l1')
+lr.fit(train_vecs, y_train)
+
+print (lr.score(test_vecs, y_test))
+
+
+from sklearn import tree
+
+clf = tree.DecisionTreeClassifier()
+clf.fit(train_vecs, y_train) 
+
+print (clf.score(test_vecs, y_test))
+
+
+from sklearn.ensemble import RandomForestClassifier
+
+rfc = RandomForestClassifier(n_estimators=10, max_depth=None, min_samples_split=1, random_state=0)
+rfc.fit(train_vecs, y_train) 
+
+print (rfc.score(test_vecs, y_test))
+
+
+from sklearn.ensemble import GradientBoostingClassifier
+
+gbc = GradientBoostingClassifier(n_estimators=100, learning_rate=1.0, max_depth=1, random_state=0)
+gbc.fit(train_vecs, y_train)
+
+print(gbc.score(test_vecs, y_test))
